@@ -64,7 +64,7 @@ describe('App', () => {
     });
 
     const savedCard = screen.getByText('Rows in saved speedcam.csv').closest('article');
-    const newItemsCard = screen.getByText('New items by 4-digit coordinates').closest('article');
+    const newItemsCard = screen.getByText('New items').closest('article');
 
     expect(savedCard).not.toBeNull();
     expect(newItemsCard).not.toBeNull();

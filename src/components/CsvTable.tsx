@@ -13,6 +13,11 @@ export function CsvTable({ emptyMessage, records }: CsvTableProps) {
   return (
     <div className="table-shell">
       <table className="data-table">
+        <colgroup>
+          <col className="coordinate-column" />
+          <col className="coordinate-column" />
+          <col />
+        </colgroup>
         <thead>
           <tr>
             <th>Latitude</th>
@@ -23,8 +28,8 @@ export function CsvTable({ emptyMessage, records }: CsvTableProps) {
         <tbody>
           {records.map((record) => (
             <tr key={`${record.compareKey}:${record.location}`}>
-              <td>{record.latitude}</td>
-              <td>{record.longitude}</td>
+              <td className="coordinate-cell">{record.latitude}</td>
+              <td className="coordinate-cell">{record.longitude}</td>
               <td className="location-cell" title={record.location}>
                 {record.location}
               </td>

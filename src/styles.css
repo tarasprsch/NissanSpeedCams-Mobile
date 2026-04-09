@@ -160,6 +160,10 @@ button {
   margin-top: 0;
 }
 
+.stats-grid .accent-card {
+  grid-column: 1 / -1;
+}
+
 .stat-card {
   border-radius: 16px;
   padding: 12px;
@@ -188,23 +192,6 @@ button {
 .accent-card {
   background: linear-gradient(180deg, rgba(20, 45, 70, 0.96), rgba(10, 49, 71, 0.96));
   border-color: rgba(56, 189, 248, 0.24);
-}
-
-.status-summary {
-  margin-top: 0;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(125, 211, 252, 0.14);
-  color: var(--text-soft);
-  font-size: 0.86rem;
-  overflow-wrap: anywhere;
-  line-height: 1.35;
-}
-
-.status-summary span + span {
-  display: block;
-  margin-top: 6px;
 }
 
 .saved-tab {
@@ -241,9 +228,12 @@ button {
 
 .data-table {
   width: 100%;
-  min-width: 340px;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
+}
+
+.coordinate-column {
+  width: 1px;
 }
 
 .data-table th,
@@ -251,34 +241,34 @@ button {
   padding: 4px 6px;
   text-align: left;
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-  vertical-align: top;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .data-table th {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #7dd3fc;
-  position: sticky;
-  top: 0;
   background: rgba(8, 15, 26, 0.96);
-  z-index: 1;
 }
 
 .data-table td {
   color: #e2e8f0;
-  font-size: 0.84rem;
+  font-size: 0.92rem;
 }
 
 .data-table th:nth-child(1),
-.data-table td:nth-child(1),
 .data-table th:nth-child(2),
-.data-table td:nth-child(2) {
-  width: 92px;
+.coordinate-cell {
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .location-cell {
+  width: 100%;
+  max-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -321,8 +311,8 @@ button {
     margin-top: 0;
   }
 
-  .stats-grid .stat-card:last-child {
-    grid-column: auto;
+  .stats-grid .accent-card {
+    grid-column: 2 / 3;
   }
 
   .stat-card {
@@ -340,28 +330,8 @@ button {
     font-size: 1.5rem;
   }
 
-  .status-summary {
-    padding: 12px 14px;
-    border-radius: 16px;
-    font-size: 0.92rem;
-  }
-
   .empty-panel {
     padding: 18px;
-    font-size: 1rem;
-  }
-
-  .data-table {
-    min-width: 420px;
-  }
-
-  .data-table th {
-    font-size: 0.78rem;
-    position: static;
-    background: transparent;
-  }
-
-  .data-table td {
     font-size: 1rem;
   }
 
