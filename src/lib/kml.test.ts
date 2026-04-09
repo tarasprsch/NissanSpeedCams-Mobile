@@ -24,5 +24,16 @@ describe('parseKmlDocument', () => {
       csvLine: '50.417382,30.593149,"м. Київ, Дніпровська набережна / вул. Причальна"',
     });
   });
-});
 
+  it('removes new lines from the location field', () => {
+    const multilineLocationKml = sampleKml.replace(
+      /<value>([^<]+)<\/value>/,
+      '<value>Рј. РљРёС—РІ,\nР”РЅС–РїСЂРѕРІСЃСЊРєР° РЅР°Р±РµСЂРµР¶РЅР° / РІСѓР». РџСЂРёС‡Р°Р»СЊРЅР°</value>',
+    );
+
+    const records = parseKmlDocument(multilineLocationKml);
+
+    expect(records[0]?.location).not.toContain('\n');
+    expect(records[0]?.location).toBe('Рј. РљРёС—РІ, Р”РЅС–РїСЂРѕРІСЃСЊРєР° РЅР°Р±РµСЂРµР¶РЅР° / РІСѓР». РџСЂРёС‡Р°Р»СЊРЅР°');
+  });
+});

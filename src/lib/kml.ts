@@ -11,7 +11,7 @@ function getElementsByLocalName(parent: Document | Element, localName: string): 
 function getExtendedDataValue(placemark: Element, dataName: string): string | null {
   const dataNode = getElementsByLocalName(placemark, 'Data').find((node) => node.getAttribute('name') === dataName);
   const valueNode = dataNode ? getElementsByLocalName(dataNode, 'value')[0] : null;
-  const value = valueNode?.textContent?.trim();
+  const value = valueNode?.textContent ? normalizeWhitespace(valueNode.textContent) : null;
   return value ? value : null;
 }
 
