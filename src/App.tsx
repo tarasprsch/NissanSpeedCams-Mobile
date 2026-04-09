@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CsvTable } from "./components/CsvTable";
 import { parseCsv, serializeCsv } from "./lib/csv";
 import { loadLatestSpeedcamRecords } from "./lib/loadSpeedcams";
@@ -36,6 +36,14 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSelectingExisting, setIsSelectingExisting] = useState(false);
+  const sharedTableScrollRef = useRef({ top: 0, left: 0 });
+
+  function handleTableScrollPositionChange(position: {
+    top: number;
+    left: number;
+  }) {
+    sharedTableScrollRef.current = position;
+  }
 
   async function refreshSavedRecords() {
     const result = await readSavedCsv();
@@ -174,6 +182,8 @@ export default function App() {
             <CsvTable
               records={loadedRecords}
               emptyMessage='Press "Load New" to download and parse the KML source.'
+              scrollPosition={sharedTableScrollRef.current}
+              onScrollPositionChange={handleTableScrollPositionChange}
             />
           ) : null}
 
@@ -182,6 +192,8 @@ export default function App() {
               <CsvTable
                 records={savedRecords}
                 emptyMessage="No saved CSV is available yet. Save the current data or choose an existing device CSV."
+                scrollPosition={sharedTableScrollRef.current}
+                onScrollPositionChange={handleTableScrollPositionChange}
               />
               {canPickExistingCsv() ? (
                 <button

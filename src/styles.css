@@ -205,7 +205,9 @@ button {
 }
 
 .table-shell {
-  overflow-x: auto;
+  max-height: min(62vh, 540px);
+  overflow: auto;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -235,6 +237,9 @@ button {
   letter-spacing: 0.08em;
   color: #7dd3fc;
   background: rgba(8, 15, 26, 0.96);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .data-table td {
@@ -303,6 +308,10 @@ button {
   .empty-panel {
     padding: 10px 2px;
     font-size: 1rem;
+  }
+
+  .table-shell {
+    max-height: min(68vh, 680px);
   }
 
   .ghost-button {
