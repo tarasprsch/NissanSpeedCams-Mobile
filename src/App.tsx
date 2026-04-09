@@ -142,7 +142,9 @@ export default function App() {
           </button>
         </div>
 
-        <div className="content-group">
+        <div
+          className={`content-group${activeTab === "statistics" ? "" : " is-table-view"}`}
+        >
           <div
             className="tab-row"
             role="tablist"

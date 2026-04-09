@@ -20,13 +20,16 @@
 }
 
 html {
+  height: 100%;
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -42,16 +45,31 @@ button {
 }
 
 #root {
+  height: 100vh;
   min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
 }
 
 .app-shell {
   width: min(100%, 980px);
   margin: 0 auto;
+  height: 100vh;
+  min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: max(10px, env(safe-area-inset-top, 0px)) 10px calc(18px + env(safe-area-inset-bottom, 0px));
 }
 
 .content-panel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   padding: 0;
 }
 
@@ -66,6 +84,19 @@ button {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.content-group.is-table-view {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.content-group.is-table-view>.table-shell,
+.content-group.is-table-view>.saved-tab,
+.content-group.is-table-view>.empty-panel {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .primary-button,
@@ -180,7 +211,10 @@ button {
 .saved-tab {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 10px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .ghost-button {
@@ -199,13 +233,15 @@ button {
 }
 
 .empty-panel {
+  flex: 1 1 auto;
   padding: 8px 2px;
   color: var(--text-soft);
   font-size: 0.9rem;
 }
 
 .table-shell {
-  max-height: min(62vh, 540px);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -308,10 +344,6 @@ button {
   .empty-panel {
     padding: 10px 2px;
     font-size: 1rem;
-  }
-
-  .table-shell {
-    max-height: min(68vh, 680px);
   }
 
   .ghost-button {
