@@ -117,23 +117,21 @@ export default function App() {
   return (
     <div className="app-shell">
       <section className="content-panel">
-        <div className="action-panel">
-          <div className="button-row">
-            <button
-              className="primary-button"
-              onClick={handleLoadClick}
-              disabled={isLoading}
-            >
-              {isLoading ? "Loading..." : "Load New"}
-            </button>
-            <button
-              className="secondary-button"
-              onClick={handleSaveClick}
-              disabled={isSaving || loadedRecords.length === 0}
-            >
-              {isSaving ? "Saving..." : "Save to file"}
-            </button>
-          </div>
+        <div className="button-row">
+          <button
+            className="primary-button"
+            onClick={handleLoadClick}
+            disabled={isLoading}
+          >
+            {isLoading ? "Loading..." : "Load New"}
+          </button>
+          <button
+            className="secondary-button"
+            onClick={handleSaveClick}
+            disabled={isSaving || loadedRecords.length === 0}
+          >
+            {isSaving ? "Saving..." : "Save to file"}
+          </button>
         </div>
 
         <div className="content-group">
