@@ -1,5 +1,5 @@
 import type { SpeedCamRecord } from '../types';
-import { createSpeedCamRecord } from './speedcam';
+import { createSpeedCamRecord, sortSpeedCamRecords } from './speedcam';
 
 const GPS_DATA_NAME = 'GPS координати';
 const LOCATION_DATA_NAME = 'Місце розташування приладу контролю';
@@ -73,7 +73,9 @@ export function parseKmlDocument(kmlText: string): SpeedCamRecord[] {
     throw new Error('The downloaded KML file could not be parsed.');
   }
 
-  return getElementsByLocalName(document, 'Placemark')
-    .map((placemark) => buildRecordFromPlacemark(placemark))
-    .filter((record): record is SpeedCamRecord => record !== null);
+  return sortSpeedCamRecords(
+    getElementsByLocalName(document, 'Placemark')
+      .map((placemark) => buildRecordFromPlacemark(placemark))
+      .filter((record): record is SpeedCamRecord => record !== null),
+  );
 }

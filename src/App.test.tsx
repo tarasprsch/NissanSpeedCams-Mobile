@@ -55,7 +55,7 @@ describe('App', () => {
       expect(readSavedCsvMock).toHaveBeenCalledTimes(1);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Load New Speed Data' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load New' }));
 
     await waitFor(() => {
       const loadedCard = screen.getByText('Loaded from KML').closest('article');
@@ -79,7 +79,7 @@ describe('App', () => {
       expect(readSavedCsvMock).toHaveBeenCalledTimes(1);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Load New Speed Data' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load New' }));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Save to file' })).toBeEnabled();

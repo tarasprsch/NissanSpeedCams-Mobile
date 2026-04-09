@@ -1,5 +1,5 @@
 import type { SpeedCamRecord } from '../types';
-import { createSpeedCamRecord } from './speedcam';
+import { createSpeedCamRecord, sortSpeedCamRecords } from './speedcam';
 
 function parseCsvRecords(csvText: string): string[][] {
   const records: string[][] = [];
@@ -61,23 +61,27 @@ function parseCsvRecords(csvText: string): string[][] {
 }
 
 export function serializeCsv(records: SpeedCamRecord[]): string {
-  return records.map((record) => record.csvLine).join('\r\n');
+  return sortSpeedCamRecords(records)
+    .map((record) => record.csvLine)
+    .join('\r\n');
 }
 
 export function parseCsv(csvText: string): SpeedCamRecord[] {
-  return parseCsvRecords(csvText.replace(/^\ufeff/, '')).map((fields) => {
-    if (fields.length < 3) {
-      throw new Error(`Invalid CSV row: "${fields.join(',')}"`);
-    }
+  return sortSpeedCamRecords(
+    parseCsvRecords(csvText.replace(/^\ufeff/, '')).map((fields) => {
+      if (fields.length < 3) {
+        throw new Error(`Invalid CSV row: "${fields.join(',')}"`);
+      }
 
-    const [latitudeText, longitudeText, ...locationParts] = fields;
-    const latitude = Number(latitudeText.trim());
-    const longitude = Number(longitudeText.trim());
+      const [latitudeText, longitudeText, ...locationParts] = fields;
+      const latitude = Number(latitudeText.trim());
+      const longitude = Number(longitudeText.trim());
 
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      throw new Error(`Invalid CSV row: "${fields.join(',')}"`);
-    }
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        throw new Error(`Invalid CSV row: "${fields.join(',')}"`);
+      }
 
-    return createSpeedCamRecord(latitude, longitude, locationParts.join(','));
-  });
+      return createSpeedCamRecord(latitude, longitude, locationParts.join(','));
+    }),
+  );
 }

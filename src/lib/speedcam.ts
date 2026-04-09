@@ -29,6 +29,22 @@ export function createSpeedCamRecord(latitude: number, longitude: number, locati
   };
 }
 
+export function compareSpeedCamRecords(left: SpeedCamRecord, right: SpeedCamRecord): number {
+  if (left.latitude !== right.latitude) {
+    return left.latitude - right.latitude;
+  }
+
+  if (left.longitude !== right.longitude) {
+    return left.longitude - right.longitude;
+  }
+
+  return left.location.localeCompare(right.location);
+}
+
+export function sortSpeedCamRecords(records: SpeedCamRecord[]): SpeedCamRecord[] {
+  return [...records].sort(compareSpeedCamRecords);
+}
+
 export function calculateStats(loadedRecords: SpeedCamRecord[], savedRecords: SpeedCamRecord[]): StatsSummary {
   const savedKeys = new Set(savedRecords.map((record) => record.compareKey));
   const uniqueLoadedKeys = new Set(loadedRecords.map((record) => record.compareKey));
@@ -46,4 +62,3 @@ export function calculateStats(loadedRecords: SpeedCamRecord[], savedRecords: Sp
     newCount,
   };
 }
-

@@ -124,7 +124,7 @@ export default function App() {
               onClick={handleLoadClick}
               disabled={isLoading}
             >
-              {isLoading ? "Loading..." : "Load New Speed Data"}
+              {isLoading ? "Loading..." : "Load New"}
             </button>
             <button
               className="secondary-button"
@@ -175,7 +175,7 @@ export default function App() {
           {activeTab === "loaded" ? (
             <CsvTable
               records={loadedRecords}
-              emptyMessage='Press "Load New Speed Data" to download and parse the KML source.'
+              emptyMessage='Press "Load New" to download and parse the KML source.'
             />
           ) : null}
 
