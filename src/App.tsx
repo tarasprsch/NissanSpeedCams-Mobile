@@ -124,74 +124,79 @@ export default function App() {
   return (
     <div className="app-shell">
       <section className="content-panel">
-        <div className="button-row">
-          <button className="primary-button" onClick={handleLoadClick} disabled={isLoading}>
-            {isLoading ? 'Loading...' : 'Load New Speed Data'}
-          </button>
-          <button className="secondary-button" onClick={handleSaveClick} disabled={isSaving || loadedRecords.length === 0}>
-            {isSaving ? 'Saving...' : 'Save to file'}
-          </button>
-        </div>
-        <div className="tab-row" role="tablist" aria-label="Speedcam data tabs">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={`tab-button${activeTab === tab.id ? ' is-active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-              role="tab"
-              aria-selected={activeTab === tab.id}
-            >
-              {tab.label}
+        <div className="action-panel">
+          <div className="button-row">
+            <button className="primary-button" onClick={handleLoadClick} disabled={isLoading}>
+              {isLoading ? 'Loading...' : 'Load New Speed Data'}
             </button>
-          ))}
+            <button className="secondary-button" onClick={handleSaveClick} disabled={isSaving || loadedRecords.length === 0}>
+              {isSaving ? 'Saving...' : 'Save to file'}
+            </button>
+          </div>
         </div>
 
-        {activeTab === 'statistics' ? (
-          <div className="stats-grid">
-            <article className="stat-card">
-              <span className="stat-label">Loaded from KML</span>
-              <strong>{stats.loadedCount}</strong>
-            </article>
-            <article className="stat-card">
-              <span className="stat-label">Rows in saved speedcam.csv</span>
-              <strong>{stats.savedCount}</strong>
-            </article>
-            <article className="stat-card accent-card">
-              <span className="stat-label">New items by 4-digit coordinates</span>
-              <strong>{stats.newCount}</strong>
-            </article>
-          </div>
-        ) : null}
-
-        {activeTab === 'statistics' ? (
-          <div className="status-summary" role="status">
-            <span>{statusMessage}</span>
-            <span>
-              Target file: {getTargetCsvPath()} | Saved source: {getSourceLabel(savedSource)}
-            </span>
-          </div>
-        ) : null}
-
-        {activeTab === 'loaded' ? (
-          <CsvTable
-            records={loadedRecords}
-            emptyMessage='Press "Load New Speed Data" to download and parse the KML source.'
-          />
-        ) : null}
-
-        {activeTab === 'saved' ? (
-          <div className="saved-tab">
-            <CsvTable
-              records={savedRecords}
-              emptyMessage='No saved CSV is available yet. Save the current data or choose an existing device CSV.'
-            />
-            {canPickExistingCsv() ? (
-              <button className="ghost-button" onClick={handleSelectExistingClick} disabled={isSelectingExisting}>
-                {isSelectingExisting ? 'Opening Android picker...' : 'Select existing CSV on device'}
+        <div className="content-group">
+          <div className="tab-row" role="tablist" aria-label="Speedcam data tabs">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                className={`tab-button${activeTab === tab.id ? ' is-active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+              >
+                {tab.label}
               </button>
-            ) : null}
+            ))}
           </div>
-        ) : null}
+
+          {activeTab === 'statistics' ? (
+            <div className="stats-grid">
+              <article className="stat-card">
+                <span className="stat-label">Loaded from KML</span>
+                <strong>{stats.loadedCount}</strong>
+              </article>
+              <article className="stat-card">
+                <span className="stat-label">Rows in saved speedcam.csv</span>
+                <strong>{stats.savedCount}</strong>
+              </article>
+              <article className="stat-card accent-card">
+                <span className="stat-label">New items by 4-digit coordinates</span>
+                <strong>{stats.newCount}</strong>
+              </article>
+            </div>
+          ) : null}
+
+          {activeTab === 'statistics' ? (
+            <div className="status-summary" role="status">
+              <span>{statusMessage}</span>
+              <span>
+                Target file: {getTargetCsvPath()} | Saved source: {getSourceLabel(savedSource)}
+              </span>
+            </div>
+          ) : null}
+
+          {activeTab === 'loaded' ? (
+            <CsvTable
+              records={loadedRecords}
+              emptyMessage='Press "Load New Speed Data" to download and parse the KML source.'
+            />
+          ) : null}
+
+          {activeTab === 'saved' ? (
+            <div className="saved-tab">
+              <CsvTable
+                records={savedRecords}
+                emptyMessage='No saved CSV is available yet. Save the current data or choose an existing device CSV.'
+              />
+              {canPickExistingCsv() ? (
+                <button className="ghost-button" onClick={handleSelectExistingClick} disabled={isSelectingExisting}>
+                  {isSelectingExisting ? 'Opening Android picker...' : 'Select existing CSV on device'}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </section>
     </div>
   );
