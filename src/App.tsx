@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CsvTable } from "./components/CsvTable";
 import { parseCsv, serializeCsv } from "./lib/csv";
 import { loadLatestSpeedcamRecords } from "./lib/loadSpeedcams";
-import { calculateStats } from "./lib/speedcam";
+import { calculateStats, findNewSpeedCamRecords } from "./lib/speedcam";
 import {
   canPickExistingCsv,
   pickExistingCsv,
@@ -121,6 +121,11 @@ export default function App() {
   }
 
   const stats = calculateStats(loadedRecords, savedRecords);
+  const newRecords = findNewSpeedCamRecords(loadedRecords, savedRecords);
+  const statisticsMessage =
+    loadedRecords.length === 0
+      ? 'Press "Load New" to compare the latest KML data with the saved CSV.'
+      : "No new items were found in the loaded KML data.";
 
   return (
     <div className="app-shell">
@@ -143,7 +148,7 @@ export default function App() {
         </div>
 
         <div
-          className={`content-group${activeTab === "statistics" ? "" : " is-table-view"}`}
+          className={`content-group${activeTab === "statistics" ? " is-statistics-view" : " is-table-view"}`}
         >
           <div
             className="tab-row"
@@ -164,19 +169,28 @@ export default function App() {
           </div>
 
           {activeTab === "statistics" ? (
-            <div className="stats-grid">
-              <article className="stat-card">
-                <span className="stat-label">Loaded from KML</span>
-                <strong>{stats.loadedCount}</strong>
-              </article>
-              <article className="stat-card">
-                <span className="stat-label">Rows in saved speedcam.csv</span>
-                <strong>{stats.savedCount}</strong>
-              </article>
-              <article className="stat-card accent-card">
-                <span className="stat-label">New items</span>
-                <strong>{stats.newCount}</strong>
-              </article>
+            <div className="statistics-tab">
+              <div className="stats-grid">
+                <article className="stat-card">
+                  <span className="stat-label">Loaded from KML</span>
+                  <strong>{stats.loadedCount}</strong>
+                </article>
+                <article className="stat-card">
+                  <span className="stat-label">Rows in saved speedcam.csv</span>
+                  <strong>{stats.savedCount}</strong>
+                </article>
+              </div>
+
+              <div className="new-items-panel">
+                {newRecords.length === 0 ? (
+                  <p className="section-note">{statisticsMessage}</p>
+                ) : null}
+                <CsvTable
+                  records={newRecords}
+                  emptyMessage={statisticsMessage}
+                  emptyTableMessage="No new items to display."
+                />
+              </div>
             </div>
           ) : null}
 

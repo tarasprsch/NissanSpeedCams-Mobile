@@ -64,12 +64,41 @@ describe('App', () => {
     });
 
     const savedCard = screen.getByText('Rows in saved speedcam.csv').closest('article');
-    const newItemsCard = screen.getByText('New items').closest('article');
 
     expect(savedCard).not.toBeNull();
-    expect(newItemsCard).not.toBeNull();
     expect(within(savedCard!).getByText('1')).toBeInTheDocument();
-    expect(within(newItemsCard!).getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('50.417382')).toBeInTheDocument();
+    expect(screen.getByText('30.593149')).toBeInTheDocument();
+  });
+
+  it('shows the no-new-items message and empty grid on the statistics tab', async () => {
+    readSavedCsvMock.mockResolvedValue({
+      content: [
+        '50.417382,30.593149,"first"',
+        '50.479648646,30.45352909,"second"',
+      ].join('\r\n'),
+      path: 'Download/_CopyTo-FlashDrive/myPOIs/myPOIWarnings/speedcam.csv',
+      source: 'target',
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(readSavedCsvMock).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load New' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('No new items were found in the loaded KML data.'),
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('No new items to display.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Latitude' }),
+    ).toBeInTheDocument();
   });
 
   it('saves the loaded csv and refreshes the saved tab', async () => {

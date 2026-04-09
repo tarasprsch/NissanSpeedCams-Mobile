@@ -92,9 +92,20 @@ button {
   overflow: hidden;
 }
 
+.content-group.is-statistics-view {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .content-group.is-table-view>.table-shell,
 .content-group.is-table-view>.saved-tab,
 .content-group.is-table-view>.empty-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.content-group.is-statistics-view>.statistics-tab {
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -156,6 +167,7 @@ button {
   color: #e2e8f0;
   font-size: 0.84rem;
   line-height: 1.15;
+  margin-top: 1px;
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,
@@ -174,8 +186,20 @@ button {
   margin-top: 0;
 }
 
-.stats-grid .accent-card {
-  grid-column: 1 / -1;
+.statistics-tab,
+.new-items-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.statistics-tab {
+  gap: 12px;
+}
+
+.new-items-panel {
+  flex: 1 1 auto;
+  gap: 8px;
 }
 
 .stat-card {
@@ -197,15 +221,6 @@ button {
   display: block;
   font-size: 1.35rem;
   line-height: 1;
-}
-
-.stats-grid .stat-card:last-child {
-  grid-column: 1 / -1;
-}
-
-.accent-card {
-  background: linear-gradient(180deg, rgba(20, 45, 70, 0.96), rgba(10, 49, 71, 0.96));
-  border-color: rgba(56, 189, 248, 0.24);
 }
 
 .saved-tab {
@@ -235,6 +250,12 @@ button {
 .empty-panel {
   flex: 1 1 auto;
   padding: 8px 2px;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.section-note {
+  margin: 0;
   color: var(--text-soft);
   font-size: 0.9rem;
 }
@@ -283,6 +304,11 @@ button {
   font-size: 0.92rem;
 }
 
+.empty-table-cell {
+  padding: 10px 6px;
+  color: var(--text-soft);
+}
+
 .data-table th:nth-child(1),
 .data-table th:nth-child(2),
 .coordinate-cell {
@@ -317,19 +343,19 @@ button {
   }
 
   .stats-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
     margin-top: 0;
-  }
-
-  .stats-grid .accent-card {
-    grid-column: 2 / 3;
   }
 
   .stat-card {
     min-height: 0;
     padding: 14px;
     border-radius: 18px;
+  }
+
+  .statistics-tab {
+    gap: 14px;
   }
 
   .stat-label {

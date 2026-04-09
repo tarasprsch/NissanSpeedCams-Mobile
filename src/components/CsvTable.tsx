@@ -8,6 +8,7 @@ interface ScrollPosition {
 
 interface CsvTableProps {
   emptyMessage: string;
+  emptyTableMessage?: string;
   onScrollPositionChange?: (position: ScrollPosition) => void;
   records: SpeedCamRecord[];
   scrollPosition?: ScrollPosition;
@@ -15,6 +16,7 @@ interface CsvTableProps {
 
 export function CsvTable({
   emptyMessage,
+  emptyTableMessage,
   onScrollPositionChange,
   records,
   scrollPosition,
@@ -45,7 +47,7 @@ export function CsvTable({
     });
   }
 
-  if (records.length === 0) {
+  if (records.length === 0 && !emptyTableMessage) {
     return <div className="empty-panel">{emptyMessage}</div>;
   }
 
@@ -65,15 +67,23 @@ export function CsvTable({
           </tr>
         </thead>
         <tbody>
-          {records.map((record) => (
-            <tr key={`${record.compareKey}:${record.location}`}>
-              <td className="coordinate-cell">{record.latitude}</td>
-              <td className="coordinate-cell">{record.longitude}</td>
-              <td className="location-cell" title={record.location}>
-                {record.location}
+          {records.length === 0 ? (
+            <tr className="empty-table-row">
+              <td className="empty-table-cell" colSpan={3}>
+                {emptyTableMessage ?? emptyMessage}
               </td>
             </tr>
-          ))}
+          ) : (
+            records.map((record) => (
+              <tr key={`${record.compareKey}:${record.location}`}>
+                <td className="coordinate-cell">{record.latitude}</td>
+                <td className="coordinate-cell">{record.longitude}</td>
+                <td className="location-cell" title={record.location}>
+                  {record.location}
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>

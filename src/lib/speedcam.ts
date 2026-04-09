@@ -45,20 +45,29 @@ export function sortSpeedCamRecords(records: SpeedCamRecord[]): SpeedCamRecord[]
   return [...records].sort(compareSpeedCamRecords);
 }
 
-export function calculateStats(loadedRecords: SpeedCamRecord[], savedRecords: SpeedCamRecord[]): StatsSummary {
+export function findNewSpeedCamRecords(
+  loadedRecords: SpeedCamRecord[],
+  savedRecords: SpeedCamRecord[],
+): SpeedCamRecord[] {
   const savedKeys = new Set(savedRecords.map((record) => record.compareKey));
-  const uniqueLoadedKeys = new Set(loadedRecords.map((record) => record.compareKey));
+  const seenLoadedKeys = new Set<string>();
 
-  let newCount = 0;
-  uniqueLoadedKeys.forEach((key) => {
-    if (!savedKeys.has(key)) {
-      newCount += 1;
+  return loadedRecords.filter((record) => {
+    if (savedKeys.has(record.compareKey) || seenLoadedKeys.has(record.compareKey)) {
+      return false;
     }
+
+    seenLoadedKeys.add(record.compareKey);
+    return true;
   });
+}
+
+export function calculateStats(loadedRecords: SpeedCamRecord[], savedRecords: SpeedCamRecord[]): StatsSummary {
+  const newRecords = findNewSpeedCamRecords(loadedRecords, savedRecords);
 
   return {
     loadedCount: loadedRecords.length,
     savedCount: savedRecords.length,
-    newCount,
+    newCount: newRecords.length,
   };
 }
