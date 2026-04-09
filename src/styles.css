@@ -289,7 +289,7 @@ button {
 }
 
 .data-table th {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #7dd3fc;
@@ -301,12 +301,13 @@ button {
 
 .data-table td {
   color: #e2e8f0;
-  font-size: 0.92rem;
+  font-size: 0.84rem;
 }
 
 .empty-table-cell {
   padding: 10px 6px;
   color: var(--text-soft);
+  font-size: 0.84rem;
 }
 
 .data-table th:nth-child(1),
