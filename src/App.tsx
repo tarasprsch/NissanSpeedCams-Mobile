@@ -11,10 +11,10 @@ import {
 } from "./lib/storage";
 import type { SpeedCamRecord } from "./types";
 
-type TabId = "statistics" | "loaded" | "saved";
+type TabId = "new" | "loaded" | "saved";
 
 const tabs: Array<{ id: TabId; label: string }> = [
-  { id: "statistics", label: "Statistics" },
+  { id: "new", label: "New Items" },
   { id: "loaded", label: "Loaded CSV" },
   { id: "saved", label: "Saved CSV" },
 ];
@@ -30,7 +30,7 @@ function logError(
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabId>("statistics");
+  const [activeTab, setActiveTab] = useState<TabId>("new");
   const [loadedRecords, setLoadedRecords] = useState<SpeedCamRecord[]>([]);
   const [savedRecords, setSavedRecords] = useState<SpeedCamRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,8 +68,10 @@ export default function App() {
     try {
       const records = await loadLatestSpeedcamRecords();
       setLoadedRecords(records);
-      setActiveTab("statistics");
-      console.log(`Loaded ${records.length} speedcam rows from the live KML source.`);
+      setActiveTab("new");
+      console.log(
+        `Loaded ${records.length} speedcam rows from the live KML source.`,
+      );
     } catch (error) {
       logError("KML load failed", error, "Unable to load the KML file.");
     } finally {
@@ -148,7 +150,7 @@ export default function App() {
         </div>
 
         <div
-          className={`content-group${activeTab === "statistics" ? " is-statistics-view" : " is-table-view"}`}
+          className={`content-group${activeTab === "new" ? " is-statistics-view" : " is-table-view"}`}
         >
           <div
             className="tab-row"
@@ -168,7 +170,7 @@ export default function App() {
             ))}
           </div>
 
-          {activeTab === "statistics" ? (
+          {activeTab === "new" ? (
             <div className="statistics-tab">
               <div className="stats-grid">
                 <article className="stat-card">
