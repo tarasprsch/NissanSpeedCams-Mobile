@@ -1,6 +1,33 @@
-node_modules
-dist
+# Dependencies
+node_modules/
+
+# Build output and test coverage
+dist/
+coverage/
+
+# Local tooling and editor files
+.agents/
+.npm-cache/
+.idea/
+.vscode/
+*.log
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+android_keys/
+*.jks
+*.keystore
+
+# Android build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+*.apk
+*.aab
+
+# Operating system files
 .DS_Store
-coverage
-.agents
-.npm-cache
+Thumbs.db
