@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -31,47 +32,59 @@ import org.json.JSONObject;
 @CapacitorPlugin(name = "SpeedcamStorage")
 public class SpeedcamStoragePlugin extends Plugin {
 
-    private static final String DISPLAY_NAME = "speedcam.csv";
-    private static final String RELATIVE_SUBPATH = "_CopyTo-FlashDrive/myPOIs/myPOIWarnings/";
-    private static final String TARGET_PATH = "Download/" + RELATIVE_SUBPATH + DISPLAY_NAME;
+    private static final String BASELINE_PATH = "internal/" + StoragePaths.BASELINE_FILE_NAME;
     private static final String PREFERENCES_NAME = "speedcam_storage";
     private static final String PICKED_URI_KEY = "picked_csv_uri";
 
     @PluginMethod
-    public void readSavedCsv(PluginCall call) {
+    public void readBaselineCsv(PluginCall call) {
         try {
-            JSObject targetResult = tryReadTargetCsv();
-            if (targetResult != null) {
-                call.resolve(targetResult);
-                return;
-            }
-
-            Uri pickedUri = getStoredUri(PICKED_URI_KEY);
-            if (pickedUri != null) {
-                JSObject pickedResult = new JSObject();
-                pickedResult.put("content", readTextFromUri(pickedUri));
-                pickedResult.put("path", describeUri(pickedUri));
-                pickedResult.put("source", "picked");
-                call.resolve(pickedResult);
-                return;
-            }
-
-            JSObject emptyResult = new JSObject();
-            emptyResult.put("content", JSONObject.NULL);
-            emptyResult.put("path", TARGET_PATH);
-            emptyResult.put("source", "none");
-            call.resolve(emptyResult);
+            File baselineFile = getContext().getFileStreamPath(StoragePaths.BASELINE_FILE_NAME);
+            JSObject result = new JSObject();
+            result.put("content", baselineFile.exists() ? readTextFromFile(baselineFile) : JSONObject.NULL);
+            result.put("path", BASELINE_PATH);
+            result.put("source", baselineFile.exists() ? "internal" : "none");
+            call.resolve(result);
         } catch (Exception exception) {
-            call.reject("Unable to read speedcam.csv from device storage.", exception);
+            call.reject("Unable to read the internal speedcam baseline.", exception);
         }
     }
 
     @PluginMethod
-    public void writeSavedCsv(PluginCall call) {
+    public void writeBaselineCsv(PluginCall call) {
         String content = call.getString("content");
 
         if (content == null) {
             call.reject("Missing CSV content.");
+            return;
+        }
+
+        try (FileOutputStream outputStream = getContext().openFileOutput(
+            StoragePaths.BASELINE_FILE_NAME,
+            Context.MODE_PRIVATE
+        )) {
+            outputStream.write(content.getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
+
+            JSObject result = new JSObject();
+            result.put("path", BASELINE_PATH);
+            call.resolve(result);
+        } catch (Exception exception) {
+            call.reject("Unable to update the internal speedcam baseline.", exception);
+        }
+    }
+
+    @PluginMethod
+    public void exportCsv(PluginCall call) {
+        String content = call.getString("content");
+        String destination = call.getString("destination");
+
+        if (content == null) {
+            call.reject("Missing CSV content.");
+            return;
+        }
+        if (!"downloads".equals(destination)) {
+            call.reject("Unsupported export destination.");
             return;
         }
 
@@ -83,7 +96,8 @@ public class SpeedcamStoragePlugin extends Plugin {
             }
 
             JSObject result = new JSObject();
-            result.put("path", TARGET_PATH);
+            result.put("status", "saved");
+            result.put("path", StoragePaths.DOWNLOAD_TARGET_PATH);
             call.resolve(result);
         } catch (Exception exception) {
             call.reject("Unable to save speedcam.csv to the Downloads folder.", exception);
@@ -138,32 +152,6 @@ public class SpeedcamStoragePlugin extends Plugin {
         }
     }
 
-    private JSObject tryReadTargetCsv() throws IOException {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            Uri mediaStoreUri = findTargetUri();
-            if (mediaStoreUri == null) {
-                return null;
-            }
-
-            JSObject result = new JSObject();
-            result.put("content", readTextFromUri(mediaStoreUri));
-            result.put("path", TARGET_PATH);
-            result.put("source", "target");
-            return result;
-        }
-
-        File legacyFile = getLegacyTargetFile();
-        if (!legacyFile.exists()) {
-            return null;
-        }
-
-        JSObject result = new JSObject();
-        result.put("content", readTextFromFile(legacyFile));
-        result.put("path", TARGET_PATH);
-        result.put("source", "target");
-        return result;
-    }
-
     private void writeToMediaStore(String content) throws IOException {
         ContentResolver resolver = getContext().getContentResolver();
         Uri existingUri = findTargetUri();
@@ -173,7 +161,7 @@ public class SpeedcamStoragePlugin extends Plugin {
         }
 
         ContentValues values = new ContentValues();
-        values.put(MediaStore.MediaColumns.DISPLAY_NAME, DISPLAY_NAME);
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, StoragePaths.DISPLAY_NAME);
         values.put(MediaStore.MediaColumns.MIME_TYPE, "text/csv");
         values.put(MediaStore.MediaColumns.RELATIVE_PATH, getRelativePathForMediaStore());
         values.put(MediaStore.MediaColumns.IS_PENDING, 1);
@@ -204,7 +192,7 @@ public class SpeedcamStoragePlugin extends Plugin {
         ContentResolver resolver = getContext().getContentResolver();
         String[] projection = new String[] { MediaStore.MediaColumns._ID };
         String selection = MediaStore.MediaColumns.DISPLAY_NAME + " = ? AND " + MediaStore.MediaColumns.RELATIVE_PATH + " = ?";
-        String[] selectionArgs = new String[] { DISPLAY_NAME, getRelativePathForMediaStore() };
+        String[] selectionArgs = new String[] { StoragePaths.DISPLAY_NAME, getRelativePathForMediaStore() };
 
         try (Cursor cursor = resolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection, selectionArgs, null)) {
             if (cursor == null || !cursor.moveToFirst()) {
@@ -232,7 +220,10 @@ public class SpeedcamStoragePlugin extends Plugin {
 
     private File getLegacyTargetFile() {
         File downloadsDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        return new File(downloadsDirectory, RELATIVE_SUBPATH + DISPLAY_NAME);
+        return new File(
+            downloadsDirectory,
+            StoragePaths.DOWNLOAD_RELATIVE_SUBPATH + StoragePaths.DISPLAY_NAME
+        );
     }
 
     private String readTextFromUri(Uri uri) throws IOException {
@@ -305,6 +296,6 @@ public class SpeedcamStoragePlugin extends Plugin {
     }
 
     private String getRelativePathForMediaStore() {
-        return Environment.DIRECTORY_DOWNLOADS + "/" + RELATIVE_SUBPATH;
+        return Environment.DIRECTORY_DOWNLOADS + "/" + StoragePaths.DOWNLOAD_RELATIVE_SUBPATH;
     }
 }
