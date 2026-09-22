@@ -25,7 +25,7 @@ export function createSpeedCamRecord(latitude: number, longitude: number, locati
     longitude,
     location: normalizedLocation,
     compareKey: buildCompareKey(latitude, longitude),
-    csvLine: `${latitudeText},${longitudeText},${escapeCsvField(normalizedLocation)}`,
+    csvLine: `${longitudeText},${latitudeText},${escapeCsvField(normalizedLocation)}`,
   };
 }
 

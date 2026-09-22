@@ -27,7 +27,7 @@ describe('App', () => {
     writeSavedCsvMock.mockReset();
     pickExistingCsvMock.mockReset();
     readSavedCsvMock.mockResolvedValue({
-      content: '50.479648646,30.45352909,"м. Київ, вул. Олени Теліги, 37"',
+      content: '30.45352909,50.479648646,"м. Київ, вул. Олени Теліги, 37"',
       path: 'Download/_CopyTo-FlashDrive/myPOIs/myPOIWarnings/speedcam.csv',
       source: 'target',
     });
@@ -35,7 +35,7 @@ describe('App', () => {
       path: 'Download/_CopyTo-FlashDrive/myPOIs/myPOIWarnings/speedcam.csv',
     });
     pickExistingCsvMock.mockResolvedValue({
-      content: '50.417382,30.593149,"м. Київ, Дніпровська набережна / вул. Причальна"',
+      content: '30.593149,50.417382,"м. Київ, Дніпровська набережна / вул. Причальна"',
       path: 'picked/speedcam.csv',
       source: 'picked',
     });
@@ -74,8 +74,8 @@ describe('App', () => {
   it('shows the no-new-items message and empty grid on the statistics tab', async () => {
     readSavedCsvMock.mockResolvedValue({
       content: [
-        '50.417382,30.593149,"first"',
-        '50.479648646,30.45352909,"second"',
+        '30.593149,50.417382,"first"',
+        '30.45352909,50.479648646,"second"',
       ].join('\r\n'),
       path: 'Download/_CopyTo-FlashDrive/myPOIs/myPOIWarnings/speedcam.csv',
       source: 'target',

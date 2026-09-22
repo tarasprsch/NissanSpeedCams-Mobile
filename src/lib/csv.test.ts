@@ -10,6 +10,28 @@ describe('buildCompareKey', () => {
 });
 
 describe('CSV serialization', () => {
+  it('writes longitude before latitude', () => {
+    const records = [
+      createSpeedCamRecord(45.32507, 28.453992, 'М-15 Одеса - Рені 271+315'),
+    ];
+
+    expect(serializeCsv(records)).toBe(
+      '28.453992,45.32507,"М-15 Одеса - Рені 271+315"',
+    );
+  });
+
+  it('reads longitude before latitude', () => {
+    const records = parseCsv(
+      '28.453992,45.32507,"М-15 Одеса - Рені 271+315"',
+    );
+
+    expect(records[0]).toMatchObject({
+      latitude: 45.32507,
+      longitude: 28.453992,
+      location: 'М-15 Одеса - Рені 271+315',
+    });
+  });
+
   it('round-trips rows with commas and quotes in the location text', () => {
     const records = [
       createSpeedCamRecord(50.417382, 30.593149, 'Рј. РљРёС—РІ, "РџСЂРёС‡Р°Р»СЊРЅР°", 1'),
@@ -32,15 +54,15 @@ describe('CSV serialization', () => {
     const csvText = serializeCsv(records);
 
     expect(csvText.split('\r\n')).toEqual([
-      '50.100001,30.100001,"first"',
-      '50.100001,30.900001,"second"',
-      '50.500001,30.700001,"third"',
+      '30.100001,50.100001,"first"',
+      '30.900001,50.100001,"second"',
+      '30.700001,50.500001,"third"',
     ]);
   });
 
   it('parses quoted locations that contain embedded newlines', () => {
     const csvText =
-      '50.123456,30.654321,"Рј. РљРёС—РІ,\r\nРІСѓР». Р—Р°РІР°Р»СЊРЅР°, 2)"\r\n50.999999,30.111111,"Р”СЂСѓРіР° Р°РґСЂРµСЃР°"';
+      '30.654321,50.123456,"Рј. РљРёС—РІ,\r\nРІСѓР». Р—Р°РІР°Р»СЊРЅР°, 2)"\r\n30.111111,50.999999,"Р”СЂСѓРіР° Р°РґСЂРµСЃР°"';
 
     const parsed = parseCsv(csvText);
 
@@ -54,17 +76,17 @@ describe('CSV serialization', () => {
 
   it('orders parsed CSV rows by latitude and longitude', () => {
     const csvText = [
-      '50.500001,30.700001,"third"',
-      '50.100001,30.900001,"second"',
-      '50.100001,30.100001,"first"',
+      '30.700001,50.500001,"third"',
+      '30.900001,50.100001,"second"',
+      '30.100001,50.100001,"first"',
     ].join('\r\n');
 
     const parsed = parseCsv(csvText);
 
     expect(parsed.map((record) => record.csvLine)).toEqual([
-      '50.100001,30.100001,"first"',
-      '50.100001,30.900001,"second"',
-      '50.500001,30.700001,"third"',
+      '30.100001,50.100001,"first"',
+      '30.900001,50.100001,"second"',
+      '30.700001,50.500001,"third"',
     ]);
   });
 });

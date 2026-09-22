@@ -73,7 +73,7 @@ export function parseCsv(csvText: string): SpeedCamRecord[] {
         throw new Error(`Invalid CSV row: "${fields.join(',')}"`);
       }
 
-      const [latitudeText, longitudeText, ...locationParts] = fields;
+      const [longitudeText, latitudeText, ...locationParts] = fields;
       const latitude = Number(latitudeText.trim());
       const longitude = Number(longitudeText.trim());
 
