@@ -61,8 +61,8 @@ export function CsvTable({
         </colgroup>
         <thead>
           <tr>
-            <th>Latitude</th>
             <th>Longitude</th>
+            <th>Latitude</th>
             <th>Location</th>
           </tr>
         </thead>
@@ -76,8 +76,8 @@ export function CsvTable({
           ) : (
             records.map((record) => (
               <tr key={`${record.compareKey}:${record.location}`}>
-                <td className="coordinate-cell">{record.latitude}</td>
                 <td className="coordinate-cell">{record.longitude}</td>
+                <td className="coordinate-cell">{record.latitude}</td>
                 <td className="location-cell" title={record.location}>
                   {record.location}
                 </td>
