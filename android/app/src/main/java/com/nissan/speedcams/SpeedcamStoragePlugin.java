@@ -6,7 +6,6 @@ import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -33,8 +32,6 @@ import org.json.JSONObject;
 public class SpeedcamStoragePlugin extends Plugin {
 
     private static final String BASELINE_PATH = "internal/" + StoragePaths.BASELINE_FILE_NAME;
-    private static final String PREFERENCES_NAME = "speedcam_storage";
-    private static final String PICKED_URI_KEY = "picked_csv_uri";
 
     @PluginMethod
     public void readBaselineCsv(PluginCall call) {
@@ -83,6 +80,14 @@ public class SpeedcamStoragePlugin extends Plugin {
             call.reject("Missing CSV content.");
             return;
         }
+        if ("picker".equals(destination)) {
+            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("text/csv");
+            intent.putExtra(Intent.EXTRA_TITLE, StoragePaths.DISPLAY_NAME);
+            startActivityForResult(call, intent, "handleCreateCsv");
+            return;
+        }
         if (!"downloads".equals(destination)) {
             call.reject("Unsupported export destination.");
             return;
@@ -101,6 +106,34 @@ public class SpeedcamStoragePlugin extends Plugin {
             call.resolve(result);
         } catch (Exception exception) {
             call.reject("Unable to save speedcam.csv to the Downloads folder.", exception);
+        }
+    }
+
+    @ActivityCallback
+    private void handleCreateCsv(PluginCall call, ActivityResult result) {
+        if (call == null) {
+            return;
+        }
+
+        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) {
+            resolveCancelled(call);
+            return;
+        }
+
+        Uri uri = result.getData().getData();
+        if (uri == null) {
+            resolveCancelled(call);
+            return;
+        }
+
+        try {
+            writeTextToUri(uri, call.getString("content"));
+            JSObject response = new JSObject();
+            response.put("status", "saved");
+            response.put("path", describeUri(uri));
+            call.resolve(response);
+        } catch (Exception exception) {
+            call.reject("Unable to save the selected CSV file.", exception);
         }
     }
 
@@ -128,24 +161,23 @@ public class SpeedcamStoragePlugin extends Plugin {
         }
 
         if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) {
-            call.reject("CSV selection was cancelled.");
+            resolveCancelled(call);
             return;
         }
 
         Uri uri = result.getData().getData();
         if (uri == null) {
-            call.reject("No CSV file was selected.");
+            resolveCancelled(call);
             return;
         }
 
         try {
             persistReadPermission(result.getData(), uri);
-            storeUri(PICKED_URI_KEY, uri.toString());
 
             JSObject response = new JSObject();
+            response.put("status", "picked");
             response.put("content", readTextFromUri(uri));
             response.put("path", describeUri(uri));
-            response.put("source", "picked");
             call.resolve(response);
         } catch (Exception exception) {
             call.reject("Unable to read the selected CSV file.", exception);
@@ -236,6 +268,21 @@ public class SpeedcamStoragePlugin extends Plugin {
         }
     }
 
+    private void writeTextToUri(Uri uri, String content) throws IOException {
+        if (content == null) {
+            throw new IOException("Missing CSV content.");
+        }
+
+        ContentResolver resolver = getContext().getContentResolver();
+        try (OutputStream outputStream = resolver.openOutputStream(uri, "rwt")) {
+            if (outputStream == null) {
+                throw new IOException("The selected CSV file could not be opened.");
+            }
+            outputStream.write(content.getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
+        }
+    }
+
     private String readTextFromFile(File file) throws IOException {
         try (InputStream inputStream = new FileInputStream(file)) {
             return readTextFromStream(inputStream);
@@ -282,17 +329,10 @@ public class SpeedcamStoragePlugin extends Plugin {
         }
     }
 
-    private SharedPreferences getPreferences() {
-        return getContext().getSharedPreferences(PREFERENCES_NAME, Activity.MODE_PRIVATE);
-    }
-
-    private Uri getStoredUri(String key) {
-        String value = getPreferences().getString(key, null);
-        return value == null ? null : Uri.parse(value);
-    }
-
-    private void storeUri(String key, String value) {
-        getPreferences().edit().putString(key, value).apply();
+    private void resolveCancelled(PluginCall call) {
+        JSObject response = new JSObject();
+        response.put("status", "cancelled");
+        call.resolve(response);
     }
 
     private String getRelativePathForMediaStore() {
