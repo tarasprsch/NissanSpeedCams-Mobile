@@ -2,7 +2,6 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
 import type { ReadSavedCsvResult } from '../types';
 
-const TARGET_CSV_PATH = 'Download/NissanRogue/myPOIs/myPOIWarnings/speedcam.csv';
 const WEB_STORAGE_KEY = 'speedcam.csv';
 const DOWNLOAD_FILE_NAME = 'speedcam.csv';
 
@@ -33,14 +32,6 @@ interface SpeedcamStoragePlugin {
 }
 
 const SpeedcamStorage = registerPlugin<SpeedcamStoragePlugin>('SpeedcamStorage');
-
-export function getTargetCsvPath(): string {
-  return TARGET_CSV_PATH;
-}
-
-export function canPickExistingCsv(): boolean {
-  return usesNativeSaveDialog();
-}
 
 export function usesNativeSaveDialog(): boolean {
   return Capacitor.getPlatform() === 'android';
@@ -114,17 +105,5 @@ function downloadCsv(content: string): void {
   link.click();
   document.body.removeChild(link);
   window.URL.revokeObjectURL(downloadUrl);
-}
-
-// Kept until App is migrated in Task 6.
-export const readSavedCsv = readBaselineCsv;
-
-export async function writeSavedCsv(content: string): Promise<{ path: string }> {
-  const result = await exportCsv(content, 'downloads');
-  if (result.status === 'cancelled') {
-    return { path: DOWNLOAD_FILE_NAME };
-  }
-  await writeBaselineCsv(content);
-  return { path: result.path };
 }
 

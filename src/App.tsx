@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { CsvTable } from "./components/CsvTable";
+import { SaveDestinationDialog } from "./components/SaveDestinationDialog";
 import { parseCsv, serializeCsv } from "./lib/csv";
 import { loadLatestSpeedcamRecords } from "./lib/loadSpeedcams";
 import { calculateStats, findNewSpeedCamRecords } from "./lib/speedcam";
 import {
-  canPickExistingCsv,
+  addRemovableStorageListener,
+  exportCsv,
+  getRemovableStorageStatus,
   pickExistingCsv,
-  readSavedCsv,
-  writeSavedCsv,
+  readBaselineCsv,
+  usesNativeSaveDialog,
+  writeBaselineCsv,
 } from "./lib/storage";
+import type { SaveDestination } from "./lib/storage";
 import type { SpeedCamRecord } from "./types";
 
 type TabId = "new" | "loaded" | "saved";
@@ -36,6 +41,8 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSelectingExisting, setIsSelectingExisting] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [removableStorageMounted, setRemovableStorageMounted] = useState(false);
   const sharedTableScrollRef = useRef({ top: 0, left: 0 });
 
   function handleTableScrollPositionChange(position: {
@@ -45,21 +52,62 @@ export default function App() {
     sharedTableScrollRef.current = position;
   }
 
-  async function refreshSavedRecords() {
-    const result = await readSavedCsv();
-    const records = result.content ? parseCsv(result.content) : [];
-
-    setSavedRecords(records);
-  }
-
   useEffect(() => {
-    void refreshSavedRecords().catch((error: unknown) => {
+    void readBaselineCsv().then((result) => {
+      setSavedRecords(result.content === null ? [] : parseCsv(result.content));
+    }).catch((error: unknown) => {
       logError(
-        "Saved CSV read failed",
+        "Baseline CSV read failed",
         error,
-        "Unable to read the saved CSV file.",
+        "Unable to read the internal CSV baseline.",
       );
     });
+  }, []);
+
+  useEffect(() => {
+    if (!usesNativeSaveDialog()) {
+      return;
+    }
+
+    let disposed = false;
+    let listenerHandle: Awaited<ReturnType<typeof addRemovableStorageListener>> | undefined;
+
+    void getRemovableStorageStatus()
+      .then((status) => {
+        if (!disposed) {
+          setRemovableStorageMounted(status.mounted);
+        }
+      })
+      .catch((error: unknown) => {
+        logError(
+          "Removable storage status failed",
+          error,
+          "Unable to inspect removable storage.",
+        );
+      });
+
+    void addRemovableStorageListener((status) => {
+      if (!disposed) {
+        setRemovableStorageMounted(status.mounted);
+      }
+    }).then((handle) => {
+      if (disposed) {
+        void handle.remove();
+      } else {
+        listenerHandle = handle;
+      }
+    }).catch((error: unknown) => {
+      logError(
+        "Removable storage listener failed",
+        error,
+        "Unable to monitor removable storage.",
+      );
+    });
+
+    return () => {
+      disposed = true;
+      void listenerHandle?.remove();
+    };
   }, []);
 
   async function handleLoadClick() {
@@ -87,18 +135,61 @@ export default function App() {
       return;
     }
 
-    setIsSaving(true);
+    if (!usesNativeSaveDialog()) {
+      await performSave("picker");
+      return;
+    }
 
+    setIsSaving(true);
     try {
-      const csvText = serializeCsv(loadedRecords);
-      const result = await writeSavedCsv(csvText);
-      await refreshSavedRecords();
-      setActiveTab("saved");
-      console.log(`Saved ${loadedRecords.length} rows to ${result.path}.`);
+      const status = await getRemovableStorageStatus();
+      setRemovableStorageMounted(status.mounted);
     } catch (error) {
-      logError("CSV save failed", error, "Unable to save the CSV file.");
+      logError(
+        "Removable storage status failed",
+        error,
+        "Unable to inspect removable storage.",
+      );
     } finally {
       setIsSaving(false);
+      setSaveDialogOpen(true);
+    }
+  }
+
+  async function performSave(destination: SaveDestination) {
+    setIsSaving(true);
+    const csvText = serializeCsv(loadedRecords);
+
+    try {
+      let exportResult;
+      try {
+        exportResult = await exportCsv(csvText, destination);
+      } catch (error) {
+        logError("CSV export failed", error, "Unable to export the CSV file.");
+        return;
+      }
+
+      if (exportResult.status === "cancelled") {
+        return;
+      }
+
+      try {
+        await writeBaselineCsv(csvText);
+      } catch (error) {
+        logError(
+          "CSV exported, but the internal baseline could not be updated.",
+          error,
+          "Unable to update the internal CSV baseline.",
+        );
+        return;
+      }
+
+      setSavedRecords(loadedRecords);
+      setActiveTab("saved");
+      console.log(`Saved ${loadedRecords.length} rows to ${exportResult.path}.`);
+    } finally {
+      setIsSaving(false);
+      setSaveDialogOpen(false);
     }
   }
 
@@ -112,7 +203,9 @@ export default function App() {
       }
       const records = parseCsv(result.content);
 
+      await writeBaselineCsv(result.content);
       setSavedRecords(records);
+      setActiveTab("saved");
       console.log(`Loaded ${records.length} rows from ${result.path}.`);
     } catch (error) {
       logError(
@@ -139,14 +232,14 @@ export default function App() {
           <button
             className="primary-button"
             onClick={handleLoadClick}
-            disabled={isLoading}
+            disabled={isLoading || isSaving || saveDialogOpen}
           >
             {isLoading ? "Loading..." : "Load New"}
           </button>
           <button
             className="secondary-button"
             onClick={handleSaveClick}
-            disabled={isSaving || loadedRecords.length === 0}
+            disabled={isSaving || saveDialogOpen || loadedRecords.length === 0}
           >
             {isSaving ? "Saving..." : "Save to file"}
           </button>
@@ -212,25 +305,32 @@ export default function App() {
             <div className="saved-tab">
               <CsvTable
                 records={savedRecords}
-                emptyMessage="No saved CSV is available yet. Save the current data or choose an existing device CSV."
+                emptyMessage="No saved CSV is available yet. Save the current data or import an existing CSV."
                 scrollPosition={sharedTableScrollRef.current}
                 onScrollPositionChange={handleTableScrollPositionChange}
               />
-              {canPickExistingCsv() ? (
+              {usesNativeSaveDialog() ? (
                 <button
                   className="ghost-button"
                   onClick={handleSelectExistingClick}
-                  disabled={isSelectingExisting}
+                  disabled={isSelectingExisting || isSaving}
                 >
                   {isSelectingExisting
                     ? "Opening Android picker..."
-                    : "Select existing CSV on device"}
+                    : "Import existing CSV"}
                 </button>
               ) : null}
             </div>
           ) : null}
         </div>
       </section>
+      <SaveDestinationDialog
+        open={saveDialogOpen}
+        isSaving={isSaving}
+        removableStorageMounted={removableStorageMounted}
+        onSelect={(destination) => void performSave(destination)}
+        onCancel={() => setSaveDialogOpen(false)}
+      />
     </div>
   );
 }
