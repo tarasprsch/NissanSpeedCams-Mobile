@@ -107,6 +107,9 @@ export default function App() {
 
     try {
       const result = await pickExistingCsv();
+      if (result.status === "cancelled") {
+        return;
+      }
       const records = parseCsv(result.content);
 
       setSavedRecords(records);

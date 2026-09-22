@@ -1,4 +1,4 @@
-export type SavedCsvSource = 'target' | 'picked' | 'web' | 'none';
+export type SavedCsvSource = 'internal' | 'web' | 'none';
 
 export interface SpeedCamRecord {
   latitude: number;

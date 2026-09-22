@@ -122,4 +122,23 @@ describe('App', () => {
 
     expect(readSavedCsvMock).toHaveBeenCalledTimes(2);
   });
+
+  it('treats import cancellation as a normal outcome', async () => {
+    pickExistingCsvMock.mockResolvedValue({ status: 'cancelled' });
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole('tab', { name: 'Saved CSV' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Select existing CSV on device' }),
+    );
+
+    await waitFor(() => {
+      expect(pickExistingCsvMock).toHaveBeenCalledOnce();
+    });
+    expect(log).not.toHaveBeenCalledWith(
+      expect.stringContaining('Existing CSV load failed'),
+      expect.anything(),
+    );
+  });
 });
