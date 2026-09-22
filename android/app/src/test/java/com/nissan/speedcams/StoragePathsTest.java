@@ -2,6 +2,7 @@ package com.nissan.speedcams;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 
@@ -26,5 +27,12 @@ public class StoragePathsTest {
         assertFalse(StoragePaths.isMountedRemovable(true, true, "mounted"));
         assertFalse(StoragePaths.isMountedRemovable(false, false, "mounted"));
         assertFalse(StoragePaths.isMountedRemovable(false, true, "unmounted"));
+    }
+
+    @Test
+    public void extractsVolumeIdFromTreeDocumentId() {
+        assertEquals("ABCD-1234", StoragePaths.volumeIdFromTreeDocumentId("ABCD-1234:"));
+        assertEquals("ABCD-1234", StoragePaths.volumeIdFromTreeDocumentId("ABCD-1234:exports"));
+        assertNull(StoragePaths.volumeIdFromTreeDocumentId("primary:Download"));
     }
 }

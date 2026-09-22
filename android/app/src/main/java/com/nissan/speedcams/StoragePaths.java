@@ -17,5 +17,14 @@ final class StoragePaths {
         return !primary && removable && "mounted".equals(state);
     }
 
+    static String volumeIdFromTreeDocumentId(String documentId) {
+        int separator = documentId.indexOf(':');
+        if (separator <= 0) {
+            return null;
+        }
+        String volumeId = documentId.substring(0, separator);
+        return "primary".equalsIgnoreCase(volumeId) ? null : volumeId;
+    }
+
     private StoragePaths() {}
 }

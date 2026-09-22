@@ -1,15 +1,22 @@
 package com.nissan.speedcams;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.UriPermission;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.storage.StorageManager;
+import android.os.storage.StorageVolume;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import androidx.activity.result.ActivityResult;
 import com.getcapacitor.JSObject;
@@ -26,12 +33,64 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import org.json.JSONObject;
 
 @CapacitorPlugin(name = "SpeedcamStorage")
 public class SpeedcamStoragePlugin extends Plugin {
 
     private static final String BASELINE_PATH = "internal/" + StoragePaths.BASELINE_FILE_NAME;
+    private static final String PREFERENCES_NAME = "speedcam_storage";
+    private static final String REMOVABLE_TREE_URI_KEY = "removable_tree_uri";
+    private StorageManager storageManager;
+    private StorageManager.StorageVolumeCallback storageVolumeCallback;
+    private BroadcastReceiver storageReceiver;
+
+    @Override
+    public void load() {
+        storageManager = (StorageManager) getContext().getSystemService(Context.STORAGE_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            storageVolumeCallback = new StorageManager.StorageVolumeCallback() {
+                @Override
+                public void onStateChanged(StorageVolume volume) {
+                    notifyRemovableStorageChanged();
+                }
+            };
+            storageManager.registerStorageVolumeCallback(
+                getContext().getMainExecutor(),
+                storageVolumeCallback
+            );
+        } else {
+            storageReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    notifyRemovableStorageChanged();
+                }
+            };
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(Intent.ACTION_MEDIA_MOUNTED);
+            filter.addAction(Intent.ACTION_MEDIA_UNMOUNTED);
+            filter.addAction(Intent.ACTION_MEDIA_REMOVED);
+            filter.addAction(Intent.ACTION_MEDIA_EJECT);
+            filter.addAction(Intent.ACTION_MEDIA_BAD_REMOVAL);
+            filter.addDataScheme("file");
+            getContext().registerReceiver(storageReceiver, filter);
+        }
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && storageVolumeCallback != null) {
+            storageManager.unregisterStorageVolumeCallback(storageVolumeCallback);
+            storageVolumeCallback = null;
+        } else if (storageReceiver != null) {
+            getContext().unregisterReceiver(storageReceiver);
+            storageReceiver = null;
+        }
+        super.handleOnDestroy();
+    }
 
     @PluginMethod
     public void readBaselineCsv(PluginCall call) {
@@ -72,6 +131,13 @@ public class SpeedcamStoragePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void getRemovableStorageStatus(PluginCall call) {
+        JSObject status = new JSObject();
+        status.put("mounted", hasMountedRemovableStorage());
+        call.resolve(status);
+    }
+
+    @PluginMethod
     public void exportCsv(PluginCall call) {
         String content = call.getString("content");
         String destination = call.getString("destination");
@@ -86,6 +152,10 @@ public class SpeedcamStoragePlugin extends Plugin {
             intent.setType("text/csv");
             intent.putExtra(Intent.EXTRA_TITLE, StoragePaths.DISPLAY_NAME);
             startActivityForResult(call, intent, "handleCreateCsv");
+            return;
+        }
+        if ("removable".equals(destination)) {
+            exportToRemovableStorage(call);
             return;
         }
         if (!"downloads".equals(destination)) {
@@ -137,6 +207,41 @@ public class SpeedcamStoragePlugin extends Plugin {
         }
     }
 
+    @ActivityCallback
+    private void handlePickRemovableTree(PluginCall call, ActivityResult result) {
+        if (call == null) {
+            return;
+        }
+
+        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) {
+            resolveCancelled(call);
+            return;
+        }
+
+        Intent data = result.getData();
+        Uri treeUri = data.getData();
+        if (treeUri == null) {
+            resolveCancelled(call);
+            return;
+        }
+        if (!treeMatchesMountedRemovableVolume(treeUri)) {
+            call.reject("The selected folder is not on mounted removable storage.");
+            return;
+        }
+
+        try {
+            int flags = data.getFlags()
+                & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            getContext().getContentResolver().takePersistableUriPermission(treeUri, flags);
+            storeRemovableTreeUri(treeUri);
+            writeRemovableCsv(treeUri, call.getString("content"));
+            resolveRemovableSaved(call);
+        } catch (Exception exception) {
+            clearRemovableTreeUri();
+            call.reject("Unable to save speedcam.csv to removable storage.", exception);
+        }
+    }
+
     @PluginMethod
     public void pickExistingCsv(PluginCall call) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -182,6 +287,201 @@ public class SpeedcamStoragePlugin extends Plugin {
         } catch (Exception exception) {
             call.reject("Unable to read the selected CSV file.", exception);
         }
+    }
+
+    private void exportToRemovableStorage(PluginCall call) {
+        if (!hasMountedRemovableStorage()) {
+            call.reject("No removable storage is mounted.");
+            return;
+        }
+
+        Uri treeUri = findPersistedRemovableTreeUri();
+        if (treeUri == null) {
+            launchRemovableTreePicker(call);
+            return;
+        }
+
+        try {
+            writeRemovableCsv(treeUri, call.getString("content"));
+            resolveRemovableSaved(call);
+        } catch (SecurityException exception) {
+            clearRemovableTreeUri();
+            launchRemovableTreePicker(call);
+        } catch (IOException exception) {
+            call.reject("Unable to save speedcam.csv to removable storage.", exception);
+        }
+    }
+
+    private void launchRemovableTreePicker(PluginCall call) {
+        List<StorageVolume> volumes = getMountedRemovableVolumes();
+        if (volumes.isEmpty()) {
+            call.reject("No removable storage is mounted.");
+            return;
+        }
+
+        Intent intent = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+            ? volumes.get(0).createOpenDocumentTreeIntent()
+            : new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
+        );
+        startActivityForResult(call, intent, "handlePickRemovableTree");
+    }
+
+    private boolean hasMountedRemovableStorage() {
+        return !getMountedRemovableVolumes().isEmpty();
+    }
+
+    private List<StorageVolume> getMountedRemovableVolumes() {
+        if (storageManager == null) {
+            storageManager = (StorageManager) getContext().getSystemService(Context.STORAGE_SERVICE);
+        }
+
+        List<StorageVolume> mounted = new ArrayList<>();
+        for (StorageVolume volume : storageManager.getStorageVolumes()) {
+            if (
+                StoragePaths.isMountedRemovable(
+                    volume.isPrimary(),
+                    volume.isRemovable(),
+                    volume.getState()
+                )
+            ) {
+                mounted.add(volume);
+            }
+        }
+        return mounted;
+    }
+
+    private void notifyRemovableStorageChanged() {
+        JSObject status = new JSObject();
+        status.put("mounted", hasMountedRemovableStorage());
+        notifyListeners("removableStorageChanged", status);
+    }
+
+    private Uri findPersistedRemovableTreeUri() {
+        String storedValue = getStoragePreferences().getString(REMOVABLE_TREE_URI_KEY, null);
+        if (storedValue == null) {
+            return null;
+        }
+
+        Uri storedUri = Uri.parse(storedValue);
+        boolean hasWritablePermission = false;
+        for (UriPermission permission : getContext().getContentResolver().getPersistedUriPermissions()) {
+            if (
+                storedUri.equals(permission.getUri())
+                    && permission.isReadPermission()
+                    && permission.isWritePermission()
+            ) {
+                hasWritablePermission = true;
+                break;
+            }
+        }
+
+        if (!hasWritablePermission || !treeMatchesMountedRemovableVolume(storedUri)) {
+            clearRemovableTreeUri();
+            return null;
+        }
+        return storedUri;
+    }
+
+    private boolean treeMatchesMountedRemovableVolume(Uri treeUri) {
+        String documentId;
+        try {
+            documentId = DocumentsContract.getTreeDocumentId(treeUri);
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
+
+        String volumeId = StoragePaths.volumeIdFromTreeDocumentId(documentId);
+        if (volumeId == null) {
+            return false;
+        }
+
+        for (StorageVolume volume : getMountedRemovableVolumes()) {
+            String uuid = volume.getUuid();
+            if (uuid != null && uuid.equalsIgnoreCase(volumeId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void writeRemovableCsv(Uri treeUri, String content) throws IOException {
+        if (content == null) {
+            throw new IOException("Missing CSV content.");
+        }
+
+        String treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri);
+        Uri current = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocumentId);
+
+        for (int index = 0; index < StoragePaths.REMOVABLE_SEGMENTS.length; index++) {
+            String name = StoragePaths.REMOVABLE_SEGMENTS[index];
+            boolean isFile = index == StoragePaths.REMOVABLE_SEGMENTS.length - 1;
+            String mimeType = isFile ? "text/csv" : DocumentsContract.Document.MIME_TYPE_DIR;
+            Uri child = findChildDocument(current, name, mimeType);
+            if (child == null) {
+                child = DocumentsContract.createDocument(
+                    getContext().getContentResolver(),
+                    current,
+                    mimeType,
+                    name
+                );
+            }
+            if (child == null) {
+                throw new IOException("Unable to create " + name + " on removable storage.");
+            }
+            current = child;
+        }
+
+        writeTextToUri(current, content);
+    }
+
+    private Uri findChildDocument(Uri parentUri, String name, String expectedMimeType) throws IOException {
+        String parentDocumentId = DocumentsContract.getDocumentId(parentUri);
+        Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(parentUri, parentDocumentId);
+        String[] projection = new String[] {
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+        };
+
+        try (Cursor cursor = getContext().getContentResolver().query(childrenUri, projection, null, null, null)) {
+            if (cursor == null) {
+                throw new IOException("Unable to inspect removable storage.");
+            }
+            while (cursor.moveToNext()) {
+                if (!name.equals(cursor.getString(1))) {
+                    continue;
+                }
+                if (!expectedMimeType.equals(cursor.getString(2))) {
+                    throw new IOException(name + " exists with an incompatible type.");
+                }
+                return DocumentsContract.buildDocumentUriUsingTree(parentUri, cursor.getString(0));
+            }
+        }
+        return null;
+    }
+
+    private SharedPreferences getStoragePreferences() {
+        return getContext().getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE);
+    }
+
+    private void storeRemovableTreeUri(Uri treeUri) {
+        getStoragePreferences().edit().putString(REMOVABLE_TREE_URI_KEY, treeUri.toString()).apply();
+    }
+
+    private void clearRemovableTreeUri() {
+        getStoragePreferences().edit().remove(REMOVABLE_TREE_URI_KEY).apply();
+    }
+
+    private void resolveRemovableSaved(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("status", "saved");
+        result.put("path", "myPOIs/myPOIWarnings/" + StoragePaths.DISPLAY_NAME);
+        call.resolve(result);
     }
 
     private void writeToMediaStore(String content) throws IOException {
