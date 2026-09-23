@@ -37,16 +37,22 @@ npm run android:sync  # Build the web bundle and sync it into Android
 npm run android:open  # Open the Android project in Android Studio
 ```
 
-## Android workflow
+## Build an Android APK
 
-After changing the web app, sync it before building or running from Android Studio:
+Install Node.js, Android Studio, and Android SDK 36, then run:
 
-```bash
+```powershell
+npm install
+npm run build
 npm run android:sync
-npm run android:open
+
+cd android
+.\gradlew.bat assembleDebug
 ```
 
-The Capacitor app ID is `com.nissan.speedcams`.
+The APK is created at `android/app/build/outputs/apk/debug/app-debug.apk`.
+For a signed release, run `npm run android:open` from the repository root and use
+**Build > Generate Signed App Bundle or APK** in Android Studio.
 
 ## Project structure
 
