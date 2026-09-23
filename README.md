@@ -1,13 +1,15 @@
 # Speedcam CSV Builder
 
-An Android and web app for downloading the latest speed-camera data from a KML source, comparing it with an existing `speedcam.csv`, and saving the updated CSV.
+An Android and web app for downloading speed-camera data from a KML source, comparing it with a private baseline, and exporting an updated `speedcam.csv`.
 
 ## What it does
 
 - Downloads and parses the configured speed-camera KML feed.
 - Shows loaded records, saved records, and records that are new since the previous CSV.
-- Saves the current CSV to `Download/_CopyTo-FlashDrive/myPOIs/myPOIWarnings/speedcam.csv` on Android.
-- Supports opening an existing CSV from an Android device.
+- Keeps the comparison baseline in private app storage after a successful export or import.
+- On Android, exports through Save As, `Download/NissanRogue/myPOIs/myPOIWarnings/speedcam.csv`, or `myPOIs/myPOIWarnings/speedcam.csv` on removable storage.
+- Detects mounted USB drives and microSD cards and disables removable export when none is available.
+- Imports an existing CSV to replace the private comparison baseline.
 - Uses browser local storage and a CSV download when running on the web.
 
 ## Requirements
