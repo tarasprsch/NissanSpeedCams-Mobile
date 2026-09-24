@@ -4,6 +4,7 @@ node_modules/
 # Build output and test coverage
 dist/
 coverage/
+release/
 
 # Local tooling and editor files
 .agents/
@@ -17,6 +18,7 @@ coverage/
 .env.*
 !.env.example
 android_keys/
+android/keystore.properties
 *.jks
 *.keystore
 

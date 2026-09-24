@@ -1,5 +1,47 @@
 apply plugin: 'com.android.application'
 
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { stream ->
+        keystoreProperties.load(stream)
+    }
+}
+
+def requiredSigningProperties = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
+def missingSigningProperties = requiredSigningProperties.findAll { propertyName ->
+    !keystoreProperties[propertyName]
+}
+def hasReleaseSigningConfig = keystorePropertiesFile.exists() && missingSigningProperties.isEmpty()
+def releaseKeystoreFile = hasReleaseSigningConfig
+    ? rootProject.file(keystoreProperties['storeFile'])
+    : null
+
+gradle.taskGraph.whenReady { taskGraph ->
+    def releaseTaskInGraph = taskGraph.allTasks.any { task ->
+        task.name.toLowerCase().contains('release')
+    }
+
+    if (releaseTaskInGraph && !keystorePropertiesFile.exists()) {
+        throw new GradleException(
+            "Missing android/keystore.properties. Copy keystore.properties.example and add your signing credentials."
+        )
+    }
+
+    if (releaseTaskInGraph && !missingSigningProperties.isEmpty()) {
+        throw new GradleException(
+            "Missing release signing properties: ${missingSigningProperties.join(', ')}"
+        )
+    }
+
+    if (releaseTaskInGraph && !releaseKeystoreFile.exists()) {
+        throw new GradleException(
+            "Release keystore not found: ${releaseKeystoreFile}"
+        )
+    }
+}
+
 android {
     namespace = "com.nissan.speedcams"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +58,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasReleaseSigningConfig) {
+            release {
+                storeFile releaseKeystoreFile
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (hasReleaseSigningConfig) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

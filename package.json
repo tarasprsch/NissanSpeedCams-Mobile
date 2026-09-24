@@ -1,5 +1,5 @@
 {
-  "name": "nissan-speedcams-mobile1",
+  "name": "nissan-speedcams-mobile",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "android:sync": "npx cap sync android",
-    "android:open": "npx cap open android"
+    "android:open": "npx cap open android",
+    "android:release": "bash ./build-android-release.sh"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.0",

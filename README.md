@@ -16,6 +16,7 @@ An Android and web app for downloading speed-camera data from a KML source, comp
 
 - Node.js (current LTS recommended)
 - Android Studio with an Android SDK, for Android builds and device testing
+- JDK 17 or 21 with `JAVA_HOME` configured
 
 ## Getting started
 
@@ -33,26 +34,42 @@ npm run dev           # Start the Vite development server
 npm run build         # Type-check and build the web bundle
 npm test              # Run tests once
 npm run test:watch    # Run tests in watch mode
-npm run android:sync  # Build the web bundle and sync it into Android
+npm run android:sync  # Sync the built web bundle into Android
 npm run android:open  # Open the Android project in Android Studio
+npm run android:debug # Build a debug APK
+npm run android:release # Build a signed release APK
 ```
 
 ## Build an Android APK
 
-Install Node.js, Android Studio, and Android SDK 36, then run:
+Install Node.js, Android Studio, Android SDK 36, and JDK 17 or 21. Set
+`JAVA_HOME` to the JDK, then run:
 
 ```powershell
-npm install
-npm run build
-npm run android:sync
-
-cd android
-.\gradlew.bat assembleDebug
+npm run android:debug
 ```
 
 The APK is created at `android/app/build/outputs/apk/debug/app-debug.apk`.
-For a signed release, run `npm run android:open` from the repository root and use
-**Build > Generate Signed App Bundle or APK** in Android Studio.
+
+## Build a signed release APK
+
+Create a signing key once:
+
+```powershell
+New-Item -ItemType Directory -Force android_keys
+& "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -keystore android_keys\speedcams-release.jks -alias speedcams -keyalg RSA -keysize 2048 -validity 10000
+Copy-Item android\keystore.properties.example android\keystore.properties
+```
+
+Put the key passwords in `android/keystore.properties`, then run:
+
+```bash
+npm run android:release
+```
+
+The signed APK is copied to `release/com.nissan.speedcams-v1.0.apk`. After the
+copy succeeds, the script removes generated Android build and Capacitor files.
+Keep the keystore and passwords backed up securely; they are excluded from Git.
 
 ## Project structure
 
